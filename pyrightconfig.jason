@@ -1,0 +1,4 @@
+{
+    "venvPath": "/absolute/path/to/dir/",
+    "venv": ".venv"
+}
