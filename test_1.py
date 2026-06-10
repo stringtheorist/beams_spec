@@ -9,7 +9,7 @@ from numpy.linalg import norm
 # *Local imports*
 from beams_spec.BeamProblem import TimoshenkoAdimParams
 from beams_spec.InitCondtions import *
-from beams_spec.UtilityFunctions import Ef_params, calculate_coeffs_eigenfuncs, compute_normalisation_factors, determine_eigenfrequencies, dispersion_relation, eigenfunctions, solution_st, test_bs_bc
+from beams_spec.UtilityFunctions import Ef_params, calculate_coeffs_eigenfuncs, compute_normalisation_factors, determine_eigenfrequencies, dispersion_relation, test_bs_bc
 from beams_spec.UtilityFunctions import f_function
 from beams_spec.Visualisation import  visual_check_f_functions, visually_check_initial_conditions, visually_inspect_efuncs
 
@@ -126,7 +126,7 @@ test_bs_bc(efparams, norms_ef, tolerance_efunc)
 
 visually_check_initial_conditions(s, efparams, norms_ef, tolerance_efunc)
 
-
+#time_simulation
 
 # #!! the outputs are lists not numpy objects
 # v1, e1, o2, k2 = eigenfunctions(wn, kpn, kmn, tolerance_efunc, prms)
