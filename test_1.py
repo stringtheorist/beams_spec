@@ -1,5 +1,12 @@
 
 # *Global imports*
+import os
+nthreads = 8
+os.environ["OMP_NUM_THREADS"] = str(nthreads) 
+os.environ["OPENBLAS_NUM_THREADS"] = str(nthreads) 
+os.environ["MKL_NUM_THREADS"] = str(nthreads)
+
+
 import numpy as np
 import scipy as sp
 from numpy.lib.scimath import sqrt
@@ -9,7 +16,7 @@ from numpy.linalg import norm
 # *Local imports*
 from beams_spec.BeamProblem import TimoshenkoAdimParams
 from beams_spec.InitCondtions import *
-from beams_spec.UtilityFunctions import Ef_params, calculate_coeffs_eigenfuncs, compute_normalisation_factors, determine_eigenfrequencies, dispersion_relation, test_bs_bc
+from beams_spec.UtilityFunctions import Ef_params, Sol_params, calculate_coeffs_eigenfuncs, compute_normalisation_factors, determine_eigenfrequencies, dispersion_relation, test_bs_bc, time_integration_phi
 from beams_spec.UtilityFunctions import f_function
 from beams_spec.Visualisation import  visual_check_f_functions, visually_check_initial_conditions, visually_inspect_efuncs
 
@@ -120,11 +127,16 @@ efparams = Ef_params(prms, apc, aps, amc, ams, wn, kpn, kmn)
 
 norms_ef = compute_normalisation_factors(efparams, tolerance_efunc)
 
+sparams = Sol_params(efparams, norms_ef, tolerance_efunc)
+
 #visually_inspect_efuncs(efparams, norms_ef, s, w_cutoff)
 
 test_bs_bc(efparams, norms_ef, tolerance_efunc)
 
-visually_check_initial_conditions(s, efparams, norms_ef, tolerance_efunc)
+#visually_check_initial_conditions(s, sparams)
+
+time_integration_phi(s, sparams)
+
 
 #time_simulation
 

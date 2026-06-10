@@ -7,6 +7,7 @@ from numpy.linalg import norm
 #This function returns complex values a-priori
 from numpy.lib.scimath import sqrt
 from scipy.optimize import fminbound
+from scipy.integrate import solve_ivp
 from .BeamProblem import TimoshenkoAdimParams
 from .InitCondtions import *
 
@@ -339,12 +340,21 @@ def test_bs_bc(efparams:Ef_params, norms_ef, tol):
 # k2_st=@(x,t) transpose(k2_brut(x))*(+bc.*cos(wn*t)+bs.*sin(wn*t));
 # th_st=@(x,t) transpose(w2_brut(x))*((bc.*cos(wn*t)+bs.*sin(wn*t))./wn);
 
-def v1_st(s, t, efparams, norms_ef, tol):
-    """Solution for v1 in moving frame"""
+class Sol_params:
+    def __init__(self, efparams:Ef_params, norms_ef, tol):
+        self.efparams = efparams
+        self.norms_ef = norms_ef
+        self.tol = tol
+        self.bs, self.bc = project_boundary_conditions(efparams, norms_ef, tol)
 
-    w = efparams.w
+def v1_st(s, t, sparams:Sol_params):
+    """Solution for v1 in moving frame"""
+    w = sparams.efparams.w
+    efparams = sparams.efparams
+    norms_ef = sparams.norms_ef
     nn = np.size(w)
-    bs, bc = project_boundary_conditions(efparams, norms_ef, tol)
+    bs = sparams.bs
+    bc = sparams.bc
 
     v1st = 0.0
     for i in range(nn):
@@ -353,13 +363,15 @@ def v1_st(s, t, efparams, norms_ef, tol):
     
     return v1st
 
-def e1_st(s, t, efparams, norms_ef, tol):
+def e1_st(s, t, sparams:Sol_params):
     """Solution for v1 in moving frame"""
-
-    w = efparams.w
+    w = sparams.efparams.w
+    efparams = sparams.efparams
+    norms_ef = sparams.norms_ef
+    bs = sparams.bs
+    bc = sparams.bc
     nn = np.size(w)
-    bs, bc = project_boundary_conditions(efparams, norms_ef, tol)
-
+   
     e1st = 0.0
     for i in range(nn):
         e1st = e1st + (e1_ef(s, i, efparams, norms_ef) *
@@ -367,12 +379,15 @@ def e1_st(s, t, efparams, norms_ef, tol):
     
     return e1st
 
-def o2_st(s, t, efparams, norms_ef, tol):
+def o2_st(s, t, sparams:Sol_params):
     """Solution for v1 in moving frame"""
 
-    w = efparams.w
+    w = sparams.efparams.w
+    efparams = sparams.efparams
+    norms_ef = sparams.norms_ef
+    bs = sparams.bs
+    bc = sparams.bc
     nn = np.size(w)
-    bs, bc = project_boundary_conditions(efparams, norms_ef, tol)
 
     o2st = 0.0
     for i in range(nn):
@@ -381,12 +396,14 @@ def o2_st(s, t, efparams, norms_ef, tol):
     
     return o2st
 
-def k2_st(s, t, efparams, norms_ef, tol):
+def k2_st(s, t, sparams:Sol_params):
     """Solution for v1 in moving frame"""
-
-    w = efparams.w
+    w = sparams.efparams.w
+    efparams = sparams.efparams
+    norms_ef = sparams.norms_ef
+    bs = sparams.bs
+    bc = sparams.bc
     nn = np.size(w)
-    bs, bc = project_boundary_conditions(efparams, norms_ef, tol)
 
     k2st = 0.0
     for i in range(nn):
@@ -395,12 +412,15 @@ def k2_st(s, t, efparams, norms_ef, tol):
     
     return k2st
 
-def theta_st(s, t, efparams, norms_ef, tol):
+def theta_st(s, t, sparams:Sol_params):
     """Solution for v1 in moving frame"""
 
-    w = efparams.w
+    w = sparams.efparams.w
+    efparams = sparams.efparams
+    norms_ef = sparams.norms_ef
+    bs = sparams.bs
+    bc = sparams.bc
     nn = np.size(w)
-    bs, bc = project_boundary_conditions(efparams, norms_ef, tol)
 
     thetast = 0.0
     for i in range(nn):
@@ -410,20 +430,60 @@ def theta_st(s, t, efparams, norms_ef, tol):
     return thetast
 
 
-    
 
-    
-    
+
+# function dydx = ODE_ph_X_dis(x,y,e1_s_dis,k2_s_dis,s_dis)
+# %y(1)=>phi_1(s,t(it))       pour t(it) fixé
+# %y(2)=>phi_3(s,t(it))-s     pour t(it) fixé
+# e1=interp1(s_dis,e1_s_dis,x);
+# k2=interp1(s_dis,k2_s_dis,x);
+# dydx = zeros(2,1);
+# dydx(1) = e1-k2.*(x+y(2));
+# dydx(2) = k2.*y(1);
+
+def ODE_ph_X_dis(x, y, e1_s_dis, k2_s_dis, s_dis):
+    e1 = np.interp(x, s_dis, e1_s_dis)
+    k2 = np.interp(x, s_dis, k2_s_dis)
+    dydx = np.zeros((2,), dtype=complex)
+    dydx[0] = e1 - (k2 * (x + y[1]))
+    dydx[1] = k2*y[1]
+
+    return dydx
+
+
+def time_integration_phi(s_grid, sparams:Sol_params):
+
+    w = sparams.efparams.w
+    L = sparams.efparams.Tparams.L
+    tmax = (2.0*np.pi)/np.min(w)
+    dt = 2.0*np.pi/w[9, 0]
+    t = np.r_[0.0 : tmax : dt]
+    nt = np.size(t)
+    ns = np.size(s_grid)
+    xspan = (0, L)
+    k2_dis = np.zeros((ns, nt), dtype=complex)
+    e1_dis = np.zeros((ns, nt), dtype=complex)
+    s_grid = s_grid.reshape((ns,))
+    tol = sparams.tol
+
+    print(f'Value of nt:{nt}')
+    print(f'Value of ns:{ns}')
+    #Discretized values of k2 and e1 on s-t grid
+    for i in range(ns):
+        if i%10 == 0:
+            print(f'i = {i}')
+        for j in range(nt):
+            e1_dis[i, j] = e1_st(s_grid[i], t[j], sparams)
+            k2_dis[i, j] = k2_st(s_grid[i], t[j], sparams)
+        #endfor
+    #endfor
+
+    #Time integration loop
+    for it in range(nt):
+        F = lambda x, y, it=it: ODE_ph_X_dis(x, y, e1_dis[:, it].reshape((ns,)),
+                                             k2_dis[:, it].reshape((ns,)), s_grid)
+        y0 = np.array([0.0, 0.0])
+        sol = solve_ivp(F, xspan, y0, t_eval=s_grid, atol=tol, rtol=tol)
+        print(f'Iteration:{it}')
         
 
-    
-    
-    
-
-    
-    
-
-
-    
-
-    

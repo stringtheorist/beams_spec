@@ -9,9 +9,9 @@ from .BeamProblem import TimoshenkoAdimParams
 
 
 
-def visually_check_initial_conditions(s, efparams, norms_ef, tol):
+def visually_check_initial_conditions(s, sparams:Sol_params):
 
-    params = efparams.Tparams
+    params = sparams.efparams.Tparams
     v1_s0_ = np.vectorize(v1_s0)
     e1_s0_ = np.vectorize(e1_s0)
     w2_s0_ = np.vectorize(w2_s0)
@@ -22,10 +22,10 @@ def visually_check_initial_conditions(s, efparams, norms_ef, tol):
     o2_s0_d = w2_s0_(s, params)
     k2_s0_d = k2_s0_(s, params)
 
-    v1_st_d = v1_st(s, 0.0, efparams, norms_ef, tol)
-    e1_st_d = e1_st(s, 0.0, efparams, norms_ef, tol)
-    o2_st_d = o2_st(s, 0.0, efparams, norms_ef, tol)
-    k2_st_d = k2_st(s, 0.0, efparams, norms_ef, tol)
+    v1_st_d = v1_st(s, 0.0, sparams)
+    e1_st_d = e1_st(s, 0.0, sparams)
+    o2_st_d = o2_st(s, 0.0, sparams)
+    k2_st_d = k2_st(s, 0.0, sparams)
 
     fig, axes = plt.subplots(4, 1)
 
