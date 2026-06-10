@@ -291,7 +291,124 @@ def k2_ef(x, i, efparams:Ef_params, norms_ef):
     return k2_ef_i_nn(x, i, efparams)/norms_ef[i, 0]
     
 
+def project_boundary_conditions(efparams:Ef_params, norms_ef, tol):
+    """returns the arrays bc and bs from the matlab code"""
+    params = efparams.Tparams
+    w = efparams.w
+    nn = np.size(w)
+    bc = np.zeros((nn, 1), dtype=complex)
+    bs = np.zeros((nn, 1), dtype=complex)
+
+    zf = lambda x: 0.0*x
+    v11_s0 = lambda x: v1_s0(x, params)
+    e11_s0 = lambda x: e1_s0(x, params)
+    o22_s0 = lambda x: w2_s0(x, params)
+    k22_s0 = lambda x: k2_s0(x, params)
+
+    for i in range(nn):
+        v1_efi = lambda x, i=i: v1_ef(x, i, efparams, norms_ef)
+        e1_efi = lambda x, i=i: e1_ef(x, i, efparams, norms_ef)
+        o2_efi = lambda x, i=i: o2_ef(x, i, efparams, norms_ef)
+        k2_efi = lambda x, i=i: k2_ef(x, i, efparams, norms_ef)
+        bs[i, 0] = 2.0*scalar_product(v11_s0, e11_s0, o22_s0, k22_s0,
+                                      v1_efi, zf, o2_efi, zf, tol, params)
+        bc[i, 0] = 2.0*scalar_product(v11_s0, e11_s0, o22_s0, k22_s0,
+                                      zf, e1_efi, zf, k2_efi, tol, params)
+    #end for
+
+    return (bs, bc)
+
+def test_bs_bc(efparams:Ef_params, norms_ef, tol):
+
+    bs, bc = project_boundary_conditions(efparams, norms_ef, tol)
+
+    bc_test_file = loadmat('bc_test.mat')
+    bs_test_file = loadmat('bs_test.mat')
+    bc_test = bc_test_file['bc']
+    bs_test = bs_test_file['bs']
+
+    assert np.shape(bs_test) == np.shape(bs)
+    assert np.shape(bc_test) == np.shape(bc)
+
+    print(f'Test norm for bc: {norm(bc_test - bc):1.5e}')
+    print(f'Test norm for bs: {norm(bs_test - bs):1.5e}')
+
+# v1_st=@(x,t) transpose(v1_brut(x))*(-bc.*sin(wn*t)+bs.*cos(wn*t));
+# e1_st=@(x,t) transpose(e1_brut(x))*(+bc.*cos(wn*t)+bs.*sin(wn*t));
+# w2_st=@(x,t) transpose(w2_brut(x))*(-bc.*sin(wn*t)+bs.*cos(wn*t));
+# k2_st=@(x,t) transpose(k2_brut(x))*(+bc.*cos(wn*t)+bs.*sin(wn*t));
+# th_st=@(x,t) transpose(w2_brut(x))*((bc.*cos(wn*t)+bs.*sin(wn*t))./wn);
+
+def v1_st(s, t, efparams, norms_ef, tol):
+    """Solution for v1 in moving frame"""
+
+    w = efparams.w
+    nn = np.size(w)
+    bs, bc = project_boundary_conditions(efparams, norms_ef, tol)
+
+    v1st = 0.0
+    for i in range(nn):
+        v1st = v1st + (v1_ef(s, i, efparams, norms_ef) *
+                       (-bc[i, 0]*np.sin(w[i, 0]*t) + bs[i, 0]*np.cos(w[i, 0]*t)))
     
+    return v1st
+
+def e1_st(s, t, efparams, norms_ef, tol):
+    """Solution for v1 in moving frame"""
+
+    w = efparams.w
+    nn = np.size(w)
+    bs, bc = project_boundary_conditions(efparams, norms_ef, tol)
+
+    e1st = 0.0
+    for i in range(nn):
+        e1st = e1st + (e1_ef(s, i, efparams, norms_ef) *
+                       (+bc[i, 0]*np.cos(w[i, 0]*t) + bs[i, 0]*np.sin(w[i, 0]*t)))
+    
+    return e1st
+
+def o2_st(s, t, efparams, norms_ef, tol):
+    """Solution for v1 in moving frame"""
+
+    w = efparams.w
+    nn = np.size(w)
+    bs, bc = project_boundary_conditions(efparams, norms_ef, tol)
+
+    o2st = 0.0
+    for i in range(nn):
+        o2st = o2st + (o2_ef(s, i, efparams, norms_ef) *
+                       (-bc[i, 0]*np.sin(w[i, 0]*t) + bs[i, 0]*np.cos(w[i, 0]*t)))
+    
+    return o2st
+
+def k2_st(s, t, efparams, norms_ef, tol):
+    """Solution for v1 in moving frame"""
+
+    w = efparams.w
+    nn = np.size(w)
+    bs, bc = project_boundary_conditions(efparams, norms_ef, tol)
+
+    k2st = 0.0
+    for i in range(nn):
+        k2st = k2st + (k2_ef(s, i, efparams, norms_ef) *
+                       (+bc[i, 0]*np.cos(w[i, 0]*t) + bs[i, 0]*np.sin(w[i, 0]*t)))
+    
+    return k2st
+
+def theta_st(s, t, efparams, norms_ef, tol):
+    """Solution for v1 in moving frame"""
+
+    w = efparams.w
+    nn = np.size(w)
+    bs, bc = project_boundary_conditions(efparams, norms_ef, tol)
+
+    thetast = 0.0
+    for i in range(nn):
+        thetast = thetast + ((o2_ef(s, i, efparams, norms_ef) *
+                              (+bc[i, 0]*np.cos(w[i, 0]*t) + bs[i, 0]*np.sin(w[i, 0]*t)))/w[i,0])
+    
+    return thetast
+
 
     
 

@@ -9,9 +9,9 @@ from numpy.linalg import norm
 # *Local imports*
 from beams_spec.BeamProblem import TimoshenkoAdimParams
 from beams_spec.InitCondtions import *
-from beams_spec.UtilityFunctions import Ef_params, calculate_coeffs_eigenfuncs, compute_normalisation_factors, determine_eigenfrequencies, dispersion_relation, eigenfunctions, solution_st
+from beams_spec.UtilityFunctions import Ef_params, calculate_coeffs_eigenfuncs, compute_normalisation_factors, determine_eigenfrequencies, dispersion_relation, eigenfunctions, solution_st, test_bs_bc
 from beams_spec.UtilityFunctions import f_function
-from beams_spec.Visualisation import visual_check_eigenfunctions, visual_check_f_functions, visual_check_init_conditions, visually_inspect_efuncs
+from beams_spec.Visualisation import  visual_check_f_functions, visually_check_initial_conditions, visually_inspect_efuncs
 
 #set parameters from the reference file
 
@@ -120,7 +120,11 @@ efparams = Ef_params(prms, apc, aps, amc, ams, wn, kpn, kmn)
 
 norms_ef = compute_normalisation_factors(efparams, tolerance_efunc)
 
-visually_inspect_efuncs(efparams, norms_ef, s, w_cutoff)
+#visually_inspect_efuncs(efparams, norms_ef, s, w_cutoff)
+
+test_bs_bc(efparams, norms_ef, tolerance_efunc)
+
+visually_check_initial_conditions(s, efparams, norms_ef, tolerance_efunc)
 
 
 
