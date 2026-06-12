@@ -122,7 +122,7 @@ print(f'Test aps norm:{norm(aps - aps_test):1.5e}')
 print(f'Test amc norm:{norm(amc - amc_test):1.5e}')
 print(f'Test ams norm:{norm(ams - ams_test):1.5e}')
 
-efparams = BasisParameters(prms, apc, aps, amc, ams, wn, kpn, kmn)
+efparams = BasisParameters(w_max, w_cutoff, delta_w, tolerance_ef, prms)
 
 norms_ef = compute_normalisation_factors(efparams, tolerance_efunc)
 

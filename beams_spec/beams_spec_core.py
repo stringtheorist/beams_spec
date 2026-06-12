@@ -6,21 +6,11 @@ from numpy.linalg import norm
 
 #This function returns complex values a-priori
 from numpy.lib.scimath import sqrt
-from scipy.optimize import fminbound
+
 from scipy.integrate import solve_ivp
 from .beams_spec_structures import *
 from .beams_spec_init_conditions import *
 
-class BasisParameters:
-    def __init__(self, adim_params:NondimensionalBeamParameters, apc, aps, amc, ams, w, kp, km):
-        self.adim_params = adim_params
-        self.apc = apc
-        self.aps = aps
-        self.amc = amc
-        self.ams = ams
-        self.kp = kp
-        self.km = km
-        self.w = w
 
 class SolutionParameters:
     def __init__(self, basis_params:BasisParameters, norms_ef, tol):
@@ -29,113 +19,6 @@ class SolutionParameters:
         self.tol = tol
         self.bs, self.bc = project_boundary_conditions(basis_params, norms_ef, tol)
 
-
-
-def dispersion_relation(w, params:NondimensionalBeamParameters):
-    """Returns a discretized version
-    of the dispersion relation on a frequency grid (w is an array)"""
-
-    g = params.g
-
-    W = w * w
-
-    #DEBUG: check that nothing weird has happened due to
-    #NumPy's detestable automatic reshaping.
-    assert np.shape(W) == np.shape(w)
-
-
-    #     Kp=( (1+g)*W + sqrt(W).*sqrt((1-2*g).*W + g^2*(4+W)) )/(2*g);
-    # Km=( (1+g)*W - sqrt(W).*sqrt((1-2*g).*W + g^2*(4+W)) )/(2*g);
-
-    E = (sqrt(W)*(sqrt((1-2*g)*W + (g**2)*(4+W))))
-    Kp = ( ((1 + g)*W) + E )/(2*g)
-    Km = ( ((1 + g)*W) - E )/(2*g)
-
-    #DEBUG: check dimensions
-    assert np.shape(W) == np.shape(Kp)
-    assert np.shape(W) == np.shape(Km)
-
-    return (sqrt(Kp), sqrt(Km))
-
-
-
-def f_function(w, params:NondimensionalBeamParameters):
-    """Corresponds to FonctionF in the matlab version"""
-
-    L = params.L
-    g = params.g
-
-    kp, km = dispersion_relation(w, params)
-
-    Kp = kp**2
-    Km = km**2
-    W = w**2
-
-    #Frequency equations for bcs clamped -- free i.e cantilever
-    #F=(g*km.*kp.*(g*(Km.^2+Kp.^2)-2*W.^2).*cos(km*L).*cos(kp*L) +...
-    #(g*Km-W).*(g*Kp-W).*(-2*km.*kp+(1+1/g)*W.*sin(km*L).*sin(kp*L)));
-   
-    f = (g * km * kp * (g * (Km**2 + Kp**2)-(2.0*W**2))*np.cos(km * L) * np.cos(kp * L) +
-                        (g*Km - W)*(g*Kp - W)*((-2.0 * km * kp) +
-                                               (1.0 + (1.0/g)) * W * np.sin(km * L) *
-                                               np.sin(kp*L)))
-
-
-    assert np.shape(w) == np.shape(f)
-    
-    return f
-
-
-
-def compute_frequencies_wavenumbers(w, tolerance:float, params:NondimensionalBeamParameters):
-    """returns eigenfrequencies"""
-    #L = params.L
-    #g = params.g
-    delta_w = w[1, 0] - w[0, 0]
-    #print('I am here!!')
-    f_abs = lambda w : np.abs(f_function(w, params))**2
-
-    #TODO: Carefully verify the following there is likely a
-    #difference in behaviour between this and matlab counterparts
-    ddf = np.diff(np.sign(np.diff(f_abs(w).flatten())))
-
-    ddf = np.concat((ddf, np.array([0, 0])))
-
-    w_n = w.flatten()[ddf==2]
-    n_n = np.size(w_n)
-    #print(f'this is n:{n}')
-    w_n = w_n.reshape((np.size(w_n), 1))
-
-    idx_w = 0
-    w_n_refined = np.zeros(np.size(w_n))
-
-    for idx_n in range(n_n):
-        #print('Debug: I am here')
-        x1 = np.max([np.min(w), w_n[idx_n, 0] - (2.0 * delta_w)])
-        x2 = np.min([w_n[idx_n, 0] + (2.0 * delta_w), np.max(w)])
-
-        f_opt_func = lambda w : f_abs(w) / f_abs(w_n[idx_n])
-
-        x, f_val, ierr, num_eval = fminbound(f_opt_func, x1, x2, xtol=tolerance, full_output=True)
-
-        #print(f'Debug: This is x:{x}')
-
-        if ierr == 0:
-            w_n_refined[idx_w] = x[0]
-            idx_w = idx_w + 1
-
-
-
-    #Now eliminate extraneous values in w_n_refined
-    w_n_refined = w_n_refined.flatten()
-    mask = np.ones(np.size(w_n_refined), dtype=bool)
-    mask[idx_w:] = False
-    w_n_refined = w_n_refined[mask]
-    w_n_refined = w_n_refined.reshape((np.size(w_n_refined), 1))
-
-    kp_n, km_n = dispersion_relation(w_n_refined, params)
-    
-    return (w_n_refined, kp_n, km_n)
 
 
 def scalar_product(x1, x2, x3, x4, y1, y2, y3, y4, tol:float, params:NondimensionalBeamParameters):
@@ -165,33 +48,6 @@ def scalar_product(x1, x2, x3, x4, y1, y2, y3, y4, tol:float, params:Nondimensio
 
 
 
-def compute_modal_amplitutes(w, kp, km, params:NondimensionalBeamParameters):
-    g = params.g
-    L = params.L
-
-    W = w**2
-    Kp = kp**2
-    Km = km**2
-
-    # apc = (g*Km-W).*(-kp.*sin(km*L)+km.*sin(kp*L));
-    # aps = km.*(+(g*Kp-W).*cos(km*L) - (g*Km-W).*cos(kp*L));
-    # amc = (g*Kp-W).*(+kp.*sin(km*L)-km.*sin(kp*L));
-    # ams = kp.*(-(g*Kp-W).*cos(km*L) + (g*Km-W).*cos(kp*L));
-
-    #Compute modal amplitutes
-    #IMP!: This calculation suffers from numerical instability due
-    #to subtraction of large values 
-    apc = (g*Km - W)*(-kp*np.sin(km*L) + km*np.sin(kp*L));
-    aps = km*((g*Kp - W)*np.cos(km*L) - (g*Km - W)*np.cos(kp*L));
-    amc = (g*Kp - W)*(kp*np.sin(km*L)- km*np.sin(kp*L));
-    ams = kp*(-(g*Kp - W)*np.cos(km*L) + (g*Km - W)*np.cos(kp*L));
-
-    assert np.shape(apc) == np.shape(w)
-    assert np.shape(aps) == np.shape(w)
-    assert np.shape(amc) == np.shape(w)
-    assert np.shape(ams) == np.shape(w)
-
-    return (apc,aps,amc,ams)
 
 
 
