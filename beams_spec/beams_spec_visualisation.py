@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from .beams_spec_init_conditions import *
 from .beams_spec_core import *
-from .beams_spec_structures import NondimensionalBeamParameters
+
 
 
 

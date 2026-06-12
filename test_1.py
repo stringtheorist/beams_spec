@@ -14,8 +14,6 @@ from scipy.io import loadmat
 from numpy.linalg import norm
 
 # *Local imports*
-from beams_spec.beams_spec_structures import *
-from beams_spec.beams_spec_init_conditions import *
 from beams_spec.beams_spec_core import *
 from beams_spec.beams_spec_visualisation import *
 
@@ -136,7 +134,7 @@ test_bs_bc(efparams, norms_ef, tolerance_efunc)
 
 phi1, phi3, t = time_integration_phi(s, sparams)
 
-#simulate_beam(phi1, phi3, s, t, sparams)
+simulate_beam(phi1, phi3, s, t, sparams)
 
 
 
