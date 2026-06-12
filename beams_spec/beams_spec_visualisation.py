@@ -6,28 +6,28 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from .beams_spec_init_conditions import *
 from .beams_spec_core import *
-from .beams_spec_structures import TimoshenkoAdimParams
+from .beams_spec_structures import NondimensionalBeamParameters
 
 
 
 
-def visually_check_initial_conditions(s, sparams:Sol_params):
+def visually_check_initial_conditions(s, sparams:SolutionParameters):
 
-    params = sparams.efparams.Tparams
-    v1_s0_ = np.vectorize(v1_s0)
-    e1_s0_ = np.vectorize(e1_s0)
-    w2_s0_ = np.vectorize(w2_s0)
-    k2_s0_ = np.vectorize(k2_s0)
+    params = sparams.basis_params.adim_params
+    v1_s0_ = np.vectorize(v1_init)
+    e1_s0_ = np.vectorize(e1_init)
+    w2_s0_ = np.vectorize(o2_init)
+    k2_s0_ = np.vectorize(k2_init)
 
     v1_s0_d = v1_s0_(s, params)
     e1_s0_d = e1_s0_(s, params)
     o2_s0_d = w2_s0_(s, params)
     k2_s0_d = k2_s0_(s, params)
 
-    v1_st_d = v1_st(s, 0.0, sparams)
-    e1_st_d = e1_st(s, 0.0, sparams)
-    o2_st_d = o2_st(s, 0.0, sparams)
-    k2_st_d = k2_st(s, 0.0, sparams)
+    v1_st_d = v1(s, 0.0, sparams)
+    e1_st_d = e1(s, 0.0, sparams)
+    o2_st_d = o2(s, 0.0, sparams)
+    k2_st_d = k2(s, 0.0, sparams)
 
     fig, axes = plt.subplots(4, 1)
 
@@ -58,7 +58,7 @@ def visual_check_f_functions(f_test, f_test_matlab, w):
     fig.tight_layout()
     plt.show()
 
-def visually_inspect_efuncs(efparams:Ef_params, norms_ef, s, wc):
+def visually_inspect_efuncs(efparams:BasisParameters, norms_ef, s, wc):
     """  """
     wn = efparams.w
     nc = np.asarray(wn > wc).nonzero()[0][0]
@@ -66,26 +66,26 @@ def visually_inspect_efuncs(efparams:Ef_params, norms_ef, s, wc):
     fig, axes = plt.subplots(4, 2)
 
     for i in range(5):
-        axes[0, 0].plot(s, np.imag(v1_ef(s, i, efparams, norms_ef)), lw=1)
-        axes[1, 0].plot(s, np.imag(e1_ef(s, i, efparams, norms_ef)), lw=1)
-        axes[2, 0].plot(s, np.imag(o2_ef(s, i, efparams, norms_ef)), lw=1)
-        axes[3, 0].plot(s, np.imag(k2_ef(s, i, efparams, norms_ef)), lw=1)
+        axes[0, 0].plot(s, np.imag(v1_mode_i(s, i, efparams, norms_ef)), lw=1)
+        axes[1, 0].plot(s, np.imag(e1_mode_i(s, i, efparams, norms_ef)), lw=1)
+        axes[2, 0].plot(s, np.imag(o2_mode_i(s, i, efparams, norms_ef)), lw=1)
+        axes[3, 0].plot(s, np.imag(k2_mode_i(s, i, efparams, norms_ef)), lw=1)
         
         # axes[0, 0].plot(s, (v1[i, 0](s)), lw=1)
         # axes[1, 0].plot(s, (e1[i, 0](s)), lw=1)
         # axes[2, 0].plot(s, (o2[i, 0](s)), lw=1)
         # axes[3, 0].plot(s, (k2[i, 0](s)), lw=1)
 
-        axes[0, 1].plot(s, v1_ef(s, nc + i, efparams, norms_ef), lw=3)
-        axes[1, 1].plot(s, e1_ef(s, nc + i, efparams, norms_ef), lw=3)
-        axes[2, 1].plot(s, o2_ef(s, nc + i, efparams, norms_ef), lw=3)
-        axes[3, 1].plot(s, k2_ef(s, nc + i, efparams, norms_ef), lw=3)
+        axes[0, 1].plot(s, v1_mode_i(s, nc + i, efparams, norms_ef), lw=3)
+        axes[1, 1].plot(s, e1_mode_i(s, nc + i, efparams, norms_ef), lw=3)
+        axes[2, 1].plot(s, o2_mode_i(s, nc + i, efparams, norms_ef), lw=3)
+        axes[3, 1].plot(s, k2_mode_i(s, nc + i, efparams, norms_ef), lw=3)
 
     fig.tight_layout()
     plt.show()
 
 
-def simulate_beam(phi1, phi3, s, t, sparams:Sol_params):
+def simulate_beam(phi1, phi3, s, t, sparams:SolutionParameters):
     """animate the beam motion"""
     
     ns = np.shape(phi1)[0]
@@ -101,8 +101,8 @@ def simulate_beam(phi1, phi3, s, t, sparams:Sol_params):
 
     for ii in range(ns):
         for jj in range(nt):
-            sines[ii, jj] = np.sin(theta_st(s[ii], t[jj], sparams))
-            cosines[ii, jj] = np.cos(theta_st(s[ii], t[jj], sparams))
+            sines[ii, jj] = np.sin(theta(s[ii], t[jj], sparams))
+            cosines[ii, jj] = np.cos(theta(s[ii], t[jj], sparams))
 
     def update(it):
 

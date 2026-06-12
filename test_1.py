@@ -14,18 +14,17 @@ from scipy.io import loadmat
 from numpy.linalg import norm
 
 # *Local imports*
-from beams_spec.beams_spec_structures import TimoshenkoAdimParams
+from beams_spec.beams_spec_structures import *
 from beams_spec.beams_spec_init_conditions import *
-from beams_spec.beams_spec_core import Ef_params, Sol_params, calculate_coeffs_eigenfuncs, compute_normalisation_factors, determine_eigenfrequencies, dispersion_relation, test_bs_bc, time_integration_phi
-from beams_spec.beams_spec_core import f_function
-from beams_spec.beams_spec_visualisation import  simulate_beam, visual_check_f_functions, visually_check_initial_conditions, visually_inspect_efuncs
+from beams_spec.beams_spec_core import *
+from beams_spec.beams_spec_visualisation import *
 
 #set parameters from the reference file
 
 L = 50.0 #nondimensional length of beam
 g = 2.5  #E/G
 
-prms = TimoshenkoAdimParams(L=L, g=g)
+prms = NondimensionalBeamParameters(L=L, g=g)
 
 #spatial and frequency space grid definition
 
@@ -72,8 +71,8 @@ w_hf = w_hf.reshape((np.size(w_hf), 1))
 
 tolerance_ef = 1.0e-12
 
-wn_lf, kpn_lf, kmn_lf = determine_eigenfrequencies(w_lf, tolerance_ef, prms)
-wn_hf, kpn_hf, kmn_hf = determine_eigenfrequencies(w_hf, tolerance_ef, prms)
+wn_lf, kpn_lf, kmn_lf = compute_frequencies_wavenumbers(w_lf, tolerance_ef, prms)
+wn_hf, kpn_hf, kmn_hf = compute_frequencies_wavenumbers(w_hf, tolerance_ef, prms)
 
 wn_lf_test_file = loadmat('./tests/wn_BF_test.mat')
 kpn_lf_test_file = loadmat('./tests/kpn_BF_test.mat')
@@ -108,7 +107,7 @@ kmn = np.block([[kmn_lf], [kmn_hf]])
 
 assert np.shape(wn) == np.shape(kpn) == np.shape(kmn)
 
-apc, aps, amc, ams = calculate_coeffs_eigenfuncs(wn, kpn, kmn, prms)
+apc, aps, amc, ams = compute_modal_amplitutes(wn, kpn, kmn, prms)
 
 coeffs_test_file = loadmat('./coeffs_test.mat')
 apc_test = coeffs_test_file['apc']
@@ -123,11 +122,11 @@ print(f'Test aps norm:{norm(aps - aps_test):1.5e}')
 print(f'Test amc norm:{norm(amc - amc_test):1.5e}')
 print(f'Test ams norm:{norm(ams - ams_test):1.5e}')
 
-efparams = Ef_params(prms, apc, aps, amc, ams, wn, kpn, kmn)
+efparams = BasisParameters(prms, apc, aps, amc, ams, wn, kpn, kmn)
 
 norms_ef = compute_normalisation_factors(efparams, tolerance_efunc)
 
-sparams = Sol_params(efparams, norms_ef, tolerance_efunc)
+sparams = SolutionParameters(efparams, norms_ef, tolerance_efunc)
 
 #visually_inspect_efuncs(efparams, norms_ef, s, w_cutoff)
 
@@ -137,7 +136,7 @@ test_bs_bc(efparams, norms_ef, tolerance_efunc)
 
 phi1, phi3, t = time_integration_phi(s, sparams)
 
-simulate_beam(phi1, phi3, s, t, sparams)
+#simulate_beam(phi1, phi3, s, t, sparams)
 
 
 

@@ -1,6 +1,7 @@
 from collections.abc import Callable
+#from .beams_spec_core import *
 
-class TimoshenkoAdimParams:
+class NondimensionalBeamParameters:
     def __init__(self, L:float = 50.0, g:float = 2.5, phi1_00:float = 0.0,
                  phi3_00:float = 0.0, theta_00:float = 0.0):
         self.L = L

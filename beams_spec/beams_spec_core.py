@@ -8,38 +8,58 @@ from numpy.linalg import norm
 from numpy.lib.scimath import sqrt
 from scipy.optimize import fminbound
 from scipy.integrate import solve_ivp
-from .beams_spec_structures import TimoshenkoAdimParams
+from .beams_spec_structures import *
 from .beams_spec_init_conditions import *
 
-def dispersion_relation(w, params:TimoshenkoAdimParams):
+class BasisParameters:
+    def __init__(self, adim_params:NondimensionalBeamParameters, apc, aps, amc, ams, w, kp, km):
+        self.adim_params = adim_params
+        self.apc = apc
+        self.aps = aps
+        self.amc = amc
+        self.ams = ams
+        self.kp = kp
+        self.km = km
+        self.w = w
+
+class SolutionParameters:
+    def __init__(self, basis_params:BasisParameters, norms_ef, tol):
+        self.basis_params = basis_params
+        self.norms_ef = norms_ef
+        self.tol = tol
+        self.bs, self.bc = project_boundary_conditions(basis_params, norms_ef, tol)
+
+
+
+def dispersion_relation(w, params:NondimensionalBeamParameters):
     """Returns a discretized version
     of the dispersion relation on a frequency grid (w is an array)"""
 
     g = params.g
 
-    w_sq = w * w
+    W = w * w
 
     #DEBUG: check that nothing weird has happened due to
     #NumPy's detestable automatic reshaping.
-    assert np.shape(w_sq) == np.shape(w)
+    assert np.shape(W) == np.shape(w)
 
 
     #     Kp=( (1+g)*W + sqrt(W).*sqrt((1-2*g).*W + g^2*(4+W)) )/(2*g);
     # Km=( (1+g)*W - sqrt(W).*sqrt((1-2*g).*W + g^2*(4+W)) )/(2*g);
 
-    E = (sqrt(w_sq)*(sqrt((1-2*g)*w_sq + (g**2)*(4+w_sq))))
-    kp_sq = ( ((1 + g)*w_sq) + E )/(2*g)
-    km_sq = ( ((1 + g)*w_sq) - E )/(2*g)
+    E = (sqrt(W)*(sqrt((1-2*g)*W + (g**2)*(4+W))))
+    Kp = ( ((1 + g)*W) + E )/(2*g)
+    Km = ( ((1 + g)*W) - E )/(2*g)
 
     #DEBUG: check dimensions
-    assert np.shape(w_sq) == np.shape(kp_sq)
-    assert np.shape(w_sq) == np.shape(km_sq)
+    assert np.shape(W) == np.shape(Kp)
+    assert np.shape(W) == np.shape(Km)
 
-    return (sqrt(kp_sq), sqrt(km_sq))
+    return (sqrt(Kp), sqrt(Km))
 
 
 
-def f_function(w, params:TimoshenkoAdimParams):
+def f_function(w, params:NondimensionalBeamParameters):
     """Corresponds to FonctionF in the matlab version"""
 
     L = params.L
@@ -67,7 +87,7 @@ def f_function(w, params:TimoshenkoAdimParams):
 
 
 
-def determine_eigenfrequencies(w, tolerance:float, params:TimoshenkoAdimParams):
+def compute_frequencies_wavenumbers(w, tolerance:float, params:NondimensionalBeamParameters):
     """returns eigenfrequencies"""
     #L = params.L
     #g = params.g
@@ -118,7 +138,7 @@ def determine_eigenfrequencies(w, tolerance:float, params:TimoshenkoAdimParams):
     return (w_n_refined, kp_n, km_n)
 
 
-def scalar_product(x1, x2, x3, x4, y1, y2, y3, y4, tol:float, params:TimoshenkoAdimParams):
+def scalar_product(x1, x2, x3, x4, y1, y2, y3, y4, tol:float, params:NondimensionalBeamParameters):
     """Scalar product defined by the separation of variables"""
 
     L = params.L
@@ -145,7 +165,7 @@ def scalar_product(x1, x2, x3, x4, y1, y2, y3, y4, tol:float, params:TimoshenkoA
 
 
 
-def calculate_coeffs_eigenfuncs(w, kp, km, params:TimoshenkoAdimParams):
+def compute_modal_amplitutes(w, kp, km, params:NondimensionalBeamParameters):
     g = params.g
     L = params.L
 
@@ -175,19 +195,9 @@ def calculate_coeffs_eigenfuncs(w, kp, km, params:TimoshenkoAdimParams):
 
 
 
-class Ef_params:
-    def __init__(self, Tparams:TimoshenkoAdimParams, apc, aps, amc, ams, w, kp, km):
-        self.Tparams = Tparams
-        self.apc = apc
-        self.aps = aps
-        self.amc = amc
-        self.ams = ams
-        self.kp = kp
-        self.km = km
-        self.w = w
 
-def v1_ef_i_nn(x, i, efparams:Ef_params):
-    g = efparams.Tparams.g
+def v1_mode_i_unnormalised(x, i, efparams:BasisParameters):
+    g = efparams.adim_params.g
     km = efparams.km
     kp = efparams.kp
     apc = efparams.apc
@@ -197,8 +207,8 @@ def v1_ef_i_nn(x, i, efparams:Ef_params):
     
     return -g*( km[i,0]*(ams[i,0]*np.cos(km[i,0]*x) - amc[i,0]*np.sin(km[i,0]*x)) + kp[i,0]*(aps[i,0]*np.cos(kp[i,0]*x) - apc[i, 0]*np.sin(kp[i,0]*x)) )
 
-def e1_ef_i_nn(x, i, efparams:Ef_params):
-    g = efparams.Tparams.g
+def e1_mode_i_unnormalised(x, i, efparams:BasisParameters):
+    g = efparams.adim_params.g
     km = efparams.km
     kp = efparams.kp
     apc = efparams.apc
@@ -209,8 +219,8 @@ def e1_ef_i_nn(x, i, efparams:Ef_params):
 
     return w[i,0]*(amc[i,0]*np.cos(km[i,0]*x) + apc[i,0]*np.cos(kp[i,0]*x) + ams[i,0]*np.sin(km[i,0]*x) + aps[i,0]*np.sin(kp[i,0]*x))
 
-def o2_ef_i_nn(x, i, efparams:Ef_params):
-    g = efparams.Tparams.g
+def o2_mode_i_unnormalised(x, i, efparams:BasisParameters):
+    g = efparams.adim_params.g
     km = efparams.km
     kp = efparams.kp
     apc = efparams.apc
@@ -224,8 +234,8 @@ def o2_ef_i_nn(x, i, efparams:Ef_params):
 
     return (g*Km[i,0]-W[i,0])*(amc[i,0]*np.cos(km[i,0]*x) + ams[i,0]*np.sin(km[i,0]*x)) + (g*Kp[i,0]-W[i,0])*(apc[i,0]*np.cos(kp[i,0]*x) + aps[i,0]*np.sin(kp[i,0]*x))
 
-def k2_ef_i_nn(x, i, efparams:Ef_params):
-    g = efparams.Tparams.g
+def k2_mode_i_unnormalised(x, i, efparams:BasisParameters):
+    g = efparams.adim_params.g
     km = efparams.km
     kp = efparams.kp
     apc = efparams.apc
@@ -240,7 +250,7 @@ def k2_ef_i_nn(x, i, efparams:Ef_params):
 
     return ( (g*Km[i,0]-W[i,0])*km[i,0]*(ams[i,0]*np.cos(km[i,0]*x) - amc[i,0]*np.sin(km[i,0]*x)) + (g*Kp[i,0]-W[i,0])*kp[i,0]*(aps[i,0]*np.cos(kp[i,0]*x) - apc[i,0]*np.sin(kp[i,0]*x)) )/w[i,0]
 
-def compute_ef_params(w, kp, km, params:TimoshenkoAdimParams):
+def compute_ef_params(w, kp, km, params:NondimensionalBeamParameters):
     g = params.g
     L = params.L
 
@@ -264,53 +274,53 @@ def compute_ef_params(w, kp, km, params:TimoshenkoAdimParams):
     assert np.shape(amc) == np.shape(w)
     assert np.shape(ams) == np.shape(w)
 
-    return Ef_params(params, apc, aps, amc, ams, w, kp, km)
+    return BasisParameters(params, apc, aps, amc, ams, w, kp, km)
 
-def compute_normalisation_factors(efparams:Ef_params, tol:float):
+def compute_normalisation_factors(efparams:BasisParameters, tol:float):
 
-    Tparams = efparams.Tparams
+    Tparams = efparams.adim_params
     n_shape = np.shape(efparams.w)
     n_size = np.size(efparams.w)
     norms_ef = np.zeros(n_shape, dtype=complex)
 
     for i in range(n_size):
-        v1 = lambda x, i=i: v1_ef_i_nn(x, i, efparams)
-        e1 = lambda x, i=i: e1_ef_i_nn(x, i, efparams)
-        o2 = lambda x, i=i: o2_ef_i_nn(x, i, efparams)
-        k2 = lambda x, i=i: k2_ef_i_nn(x, i, efparams)
+        v1 = lambda x, i=i: v1_mode_i_unnormalised(x, i, efparams)
+        e1 = lambda x, i=i: e1_mode_i_unnormalised(x, i, efparams)
+        o2 = lambda x, i=i: o2_mode_i_unnormalised(x, i, efparams)
+        k2 = lambda x, i=i: k2_mode_i_unnormalised(x, i, efparams)
         norms_ef[i,0] = sqrt(scalar_product(v1, e1, o2, k2, v1, e1, o2, k2, tol, Tparams))
     return norms_ef
         
         
-def v1_ef(x, i, efparams:Ef_params, norms_ef):
-    return v1_ef_i_nn(x, i, efparams)/norms_ef[i, 0]
-def e1_ef(x, i, efparams:Ef_params, norms_ef):
-    return e1_ef_i_nn(x, i, efparams)/norms_ef[i, 0]
-def o2_ef(x, i, efparams:Ef_params, norms_ef):
-    return o2_ef_i_nn(x, i, efparams)/norms_ef[i, 0]
-def k2_ef(x, i, efparams:Ef_params, norms_ef):
-    return k2_ef_i_nn(x, i, efparams)/norms_ef[i, 0]
+def v1_mode_i(x, i, efparams:BasisParameters, norms_ef):
+    return v1_mode_i_unnormalised(x, i, efparams)/norms_ef[i, 0]
+def e1_mode_i(x, i, efparams:BasisParameters, norms_ef):
+    return e1_mode_i_unnormalised(x, i, efparams)/norms_ef[i, 0]
+def o2_mode_i(x, i, efparams:BasisParameters, norms_ef):
+    return o2_mode_i_unnormalised(x, i, efparams)/norms_ef[i, 0]
+def k2_mode_i(x, i, efparams:BasisParameters, norms_ef):
+    return k2_mode_i_unnormalised(x, i, efparams)/norms_ef[i, 0]
     
 
-def project_boundary_conditions(efparams:Ef_params, norms_ef, tol):
+def project_boundary_conditions(efparams:BasisParameters, norms_ef, tol):
     """returns the arrays bc and bs from the matlab code"""
-    params = efparams.Tparams
+    params = efparams.adim_params
     w = efparams.w
     nn = np.size(w)
     bc = np.zeros((nn, 1), dtype=complex)
     bs = np.zeros((nn, 1), dtype=complex)
 
     zf = lambda x: 0.0*x
-    v11_s0 = lambda x: v1_s0(x, params)
-    e11_s0 = lambda x: e1_s0(x, params)
-    o22_s0 = lambda x: w2_s0(x, params)
-    k22_s0 = lambda x: k2_s0(x, params)
+    v11_s0 = lambda x: v1_init(x, params)
+    e11_s0 = lambda x: e1_init(x, params)
+    o22_s0 = lambda x: o2_init(x, params)
+    k22_s0 = lambda x: k2_init(x, params)
 
     for i in range(nn):
-        v1_efi = lambda x, i=i: v1_ef(x, i, efparams, norms_ef)
-        e1_efi = lambda x, i=i: e1_ef(x, i, efparams, norms_ef)
-        o2_efi = lambda x, i=i: o2_ef(x, i, efparams, norms_ef)
-        k2_efi = lambda x, i=i: k2_ef(x, i, efparams, norms_ef)
+        v1_efi = lambda x, i=i: v1_mode_i(x, i, efparams, norms_ef)
+        e1_efi = lambda x, i=i: e1_mode_i(x, i, efparams, norms_ef)
+        o2_efi = lambda x, i=i: o2_mode_i(x, i, efparams, norms_ef)
+        k2_efi = lambda x, i=i: k2_mode_i(x, i, efparams, norms_ef)
         bs[i, 0] = 2.0*scalar_product(v11_s0, e11_s0, o22_s0, k22_s0,
                                       v1_efi, zf, o2_efi, zf, tol, params)
         bc[i, 0] = 2.0*scalar_product(v11_s0, e11_s0, o22_s0, k22_s0,
@@ -319,7 +329,7 @@ def project_boundary_conditions(efparams:Ef_params, norms_ef, tol):
 
     return (bs, bc)
 
-def test_bs_bc(efparams:Ef_params, norms_ef, tol):
+def test_bs_bc(efparams:BasisParameters, norms_ef, tol):
 
     bs, bc = project_boundary_conditions(efparams, norms_ef, tol)
 
@@ -340,17 +350,11 @@ def test_bs_bc(efparams:Ef_params, norms_ef, tol):
 # k2_st=@(x,t) transpose(k2_brut(x))*(+bc.*cos(wn*t)+bs.*sin(wn*t));
 # th_st=@(x,t) transpose(w2_brut(x))*((bc.*cos(wn*t)+bs.*sin(wn*t))./wn);
 
-class Sol_params:
-    def __init__(self, efparams:Ef_params, norms_ef, tol):
-        self.efparams = efparams
-        self.norms_ef = norms_ef
-        self.tol = tol
-        self.bs, self.bc = project_boundary_conditions(efparams, norms_ef, tol)
 
-def v1_st(s, t, sparams:Sol_params):
+def v1(s, t, sparams:SolutionParameters):
     """Solution for v1 in moving frame"""
-    w = sparams.efparams.w
-    efparams = sparams.efparams
+    w = sparams.basis_params.w
+    efparams = sparams.basis_params
     norms_ef = sparams.norms_ef
     nn = np.size(w)
     bs = sparams.bs
@@ -358,15 +362,15 @@ def v1_st(s, t, sparams:Sol_params):
 
     v1st = 0.0
     for i in range(nn):
-        v1st = v1st + (v1_ef(s, i, efparams, norms_ef) *
+        v1st = v1st + (v1_mode_i(s, i, efparams, norms_ef) *
                        (-bc[i, 0]*np.sin(w[i, 0]*t) + bs[i, 0]*np.cos(w[i, 0]*t)))
     
     return v1st
 
-def e1_st(s, t, sparams:Sol_params):
+def e1(s, t, sparams:SolutionParameters):
     """Solution for v1 in moving frame"""
-    w = sparams.efparams.w
-    efparams = sparams.efparams
+    w = sparams.basis_params.w
+    efparams = sparams.basis_params
     norms_ef = sparams.norms_ef
     bs = sparams.bs
     bc = sparams.bc
@@ -374,16 +378,16 @@ def e1_st(s, t, sparams:Sol_params):
    
     e1st = 0.0
     for i in range(nn):
-        e1st = e1st + (e1_ef(s, i, efparams, norms_ef) *
+        e1st = e1st + (e1_mode_i(s, i, efparams, norms_ef) *
                        (+bc[i, 0]*np.cos(w[i, 0]*t) + bs[i, 0]*np.sin(w[i, 0]*t)))
     
     return e1st
 
-def o2_st(s, t, sparams:Sol_params):
+def o2(s, t, sparams:SolutionParameters):
     """Solution for v1 in moving frame"""
 
-    w = sparams.efparams.w
-    efparams = sparams.efparams
+    w = sparams.basis_params.w
+    efparams = sparams.basis_params
     norms_ef = sparams.norms_ef
     bs = sparams.bs
     bc = sparams.bc
@@ -391,15 +395,15 @@ def o2_st(s, t, sparams:Sol_params):
 
     o2st = 0.0
     for i in range(nn):
-        o2st = o2st + (o2_ef(s, i, efparams, norms_ef) *
+        o2st = o2st + (o2_mode_i(s, i, efparams, norms_ef) *
                        (-bc[i, 0]*np.sin(w[i, 0]*t) + bs[i, 0]*np.cos(w[i, 0]*t)))
     
     return o2st
 
-def k2_st(s, t, sparams:Sol_params):
+def k2(s, t, sparams:SolutionParameters):
     """Solution for v1 in moving frame"""
-    w = sparams.efparams.w
-    efparams = sparams.efparams
+    w = sparams.basis_params.w
+    efparams = sparams.basis_params
     norms_ef = sparams.norms_ef
     bs = sparams.bs
     bc = sparams.bc
@@ -407,16 +411,16 @@ def k2_st(s, t, sparams:Sol_params):
 
     k2st = 0.0
     for i in range(nn):
-        k2st = k2st + (k2_ef(s, i, efparams, norms_ef) *
+        k2st = k2st + (k2_mode_i(s, i, efparams, norms_ef) *
                        (+bc[i, 0]*np.cos(w[i, 0]*t) + bs[i, 0]*np.sin(w[i, 0]*t)))
     
     return k2st
 
-def theta_st(s, t, sparams:Sol_params):
+def theta(s, t, sparams:SolutionParameters):
     """Solution for v1 in moving frame"""
 
-    w = sparams.efparams.w
-    efparams = sparams.efparams
+    w = sparams.basis_params.w
+    efparams = sparams.basis_params
     norms_ef = sparams.norms_ef
     bs = sparams.bs
     bc = sparams.bc
@@ -424,7 +428,7 @@ def theta_st(s, t, sparams:Sol_params):
 
     thetast = 0.0
     for i in range(nn):
-        thetast = thetast + ((o2_ef(s, i, efparams, norms_ef) *
+        thetast = thetast + ((o2_mode_i(s, i, efparams, norms_ef) *
                               (+bc[i, 0]*np.cos(w[i, 0]*t) + bs[i, 0]*np.sin(w[i, 0]*t)))/w[i,0])
     
     return thetast
@@ -441,58 +445,58 @@ def theta_st(s, t, sparams:Sol_params):
 # dydx(1) = e1-k2.*(x+y(2));
 # dydx(2) = k2.*y(1);
 
-def ODE_ph_X_dis(x, y, e1_s_dis, k2_s_dis, s_dis):
-    e1 = np.interp(x, s_dis, e1_s_dis)
-    k2 = np.interp(x, s_dis, k2_s_dis)
-    dydx = np.zeros((2,), dtype=complex)
-    dydx[0] = e1 - (k2 * (x + y[1]))
-    dydx[1] = k2*y[1]
+def ode_phi_s(s, phi, e1_numeric_s, k2_numeric_s, s_grid):
+    e1 = np.interp(s, s_grid, e1_numeric_s)
+    k2 = np.interp(s, s_grid, k2_numeric_s)
+    phi_prime = np.zeros((2,), dtype=complex)
+    phi_prime[0] = e1 - (k2 * (s + phi[1]))
+    phi_prime[1] = k2*phi[1]
 
-    return dydx
+    return phi_prime
 
 
-def time_integration_phi(s_grid, sparams:Sol_params):
+def time_integration_phi(s_grid, sparams:SolutionParameters):
 
-    w = sparams.efparams.w
-    L = sparams.efparams.Tparams.L
+    w = sparams.basis_params.w
+    L = sparams.basis_params.adim_params.L
     tmax = (2.0*np.pi)/np.min(w)
     dt = 2.0*np.pi/w[9, 0]
     t = np.r_[0.0 : tmax : dt]
     nt = np.size(t)
     ns = np.size(s_grid)
     xspan = (0, L)
-    k2_dis = np.zeros((ns, nt), dtype=complex)
-    e1_dis = np.zeros((ns, nt), dtype=complex)
+    k2_numeric = np.zeros((ns, nt), dtype=complex)
+    k2_numeric = np.zeros((ns, nt), dtype=complex)
     s_grid = s_grid.reshape((ns,))
     tol = sparams.tol
-    phi1_st_dis = np.zeros((ns, nt), dtype=complex)
-    phi3_st_dis = np.zeros((ns, nt), dtype=complex)
+    phi1_numeric = np.zeros((ns, nt), dtype=complex)
+    phi3_numeric = np.zeros((ns, nt), dtype=complex)
 
     #print(f'Value of nt:{nt}')
     #print(f'Value of ns:{ns}')
     #Discretized values of k2 and e1 on s-t grid
     for i in range(ns):
         for j in range(nt):
-            e1_dis[i, j] = e1_st(s_grid[i], t[j], sparams)
-            k2_dis[i, j] = k2_st(s_grid[i], t[j], sparams)
+            k2_numeric[i, j] = e1(s_grid[i], t[j], sparams)
+            k2_numeric[i, j] = k2(s_grid[i], t[j], sparams)
         #endfor
     #endfor
 
     #Time integration loop
     for it in range(nt):
-        F = lambda x, y, it=it: ODE_ph_X_dis(x, y, e1_dis[:, it].reshape((ns,)),
-                                             k2_dis[:, it].reshape((ns,)), s_grid)
-        y0 = np.array([0.0, 0.0])
-        sol = solve_ivp(F, xspan, y0, t_eval=s_grid, atol=tol, rtol=tol)
-        y = sol.y
+        F = lambda s, phi, it=it: ode_phi_s(s, phi, k2_numeric[:, it].reshape((ns,)),
+                                             k2_numeric[:, it].reshape((ns,)), s_grid)
+        phi_init_s = np.array([0.0, 0.0])
+        sol = solve_ivp(F, xspan, phi_init_s, t_eval=s_grid, atol=tol, rtol=tol)
+        phi_numeric = sol.y
      
         #print(f'Shape of y:{y.shape}')
 
-        phi1_st_dis[:, it] = y[0, :]
-        phi3_st_dis[:, it] = s_grid + y[1, :]
+        phi1_numeric[:, it] = phi_numeric[0, :]
+        phi3_numeric[:, it] = s_grid + phi_numeric[1, :]
 
 
-    return (phi1_st_dis, phi3_st_dis, t)
+    return (phi1_numeric, phi3_numeric, t)
 
 
 
