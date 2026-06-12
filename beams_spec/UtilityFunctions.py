@@ -465,13 +465,13 @@ def time_integration_phi(s_grid, sparams:Sol_params):
     e1_dis = np.zeros((ns, nt), dtype=complex)
     s_grid = s_grid.reshape((ns,))
     tol = sparams.tol
+    phi1_st_dis = np.zeros((ns, nt), dtype=complex)
+    phi3_st_dis = np.zeros((ns, nt), dtype=complex)
 
-    print(f'Value of nt:{nt}')
-    print(f'Value of ns:{ns}')
+    #print(f'Value of nt:{nt}')
+    #print(f'Value of ns:{ns}')
     #Discretized values of k2 and e1 on s-t grid
     for i in range(ns):
-        if i%10 == 0:
-            print(f'i = {i}')
         for j in range(nt):
             e1_dis[i, j] = e1_st(s_grid[i], t[j], sparams)
             k2_dis[i, j] = k2_st(s_grid[i], t[j], sparams)
@@ -484,6 +484,18 @@ def time_integration_phi(s_grid, sparams:Sol_params):
                                              k2_dis[:, it].reshape((ns,)), s_grid)
         y0 = np.array([0.0, 0.0])
         sol = solve_ivp(F, xspan, y0, t_eval=s_grid, atol=tol, rtol=tol)
-        print(f'Iteration:{it}')
+        y = sol.y
+     
+        #print(f'Shape of y:{y.shape}')
+
+        phi1_st_dis[:, it] = y[0, :]
+        phi3_st_dis[:, it] = s_grid + y[1, :]
+
+
+    return (phi1_st_dis, phi3_st_dis, t)
+
+
+
+        
         
 

@@ -18,7 +18,7 @@ from beams_spec.BeamProblem import TimoshenkoAdimParams
 from beams_spec.InitCondtions import *
 from beams_spec.UtilityFunctions import Ef_params, Sol_params, calculate_coeffs_eigenfuncs, compute_normalisation_factors, determine_eigenfrequencies, dispersion_relation, test_bs_bc, time_integration_phi
 from beams_spec.UtilityFunctions import f_function
-from beams_spec.Visualisation import  visual_check_f_functions, visually_check_initial_conditions, visually_inspect_efuncs
+from beams_spec.Visualisation import  simulate_beam, visual_check_f_functions, visually_check_initial_conditions, visually_inspect_efuncs
 
 #set parameters from the reference file
 
@@ -135,7 +135,10 @@ test_bs_bc(efparams, norms_ef, tolerance_efunc)
 
 #visually_check_initial_conditions(s, sparams)
 
-time_integration_phi(s, sparams)
+phi1, phi3, t = time_integration_phi(s, sparams)
+
+simulate_beam(phi1, phi3, s, t, sparams)
+
 
 
 #time_simulation
