@@ -14,11 +14,11 @@ from scipy.io import loadmat
 from numpy.linalg import norm
 
 # *Local imports*
-from beams_spec.BeamProblem import TimoshenkoAdimParams
-from beams_spec.InitCondtions import *
-from beams_spec.UtilityFunctions import Ef_params, Sol_params, calculate_coeffs_eigenfuncs, compute_normalisation_factors, determine_eigenfrequencies, dispersion_relation, test_bs_bc, time_integration_phi
-from beams_spec.UtilityFunctions import f_function
-from beams_spec.Visualisation import  simulate_beam, visual_check_f_functions, visually_check_initial_conditions, visually_inspect_efuncs
+from beams_spec.beams_spec_structures import TimoshenkoAdimParams
+from beams_spec.beams_spec_init_conditions import *
+from beams_spec.beams_spec_core import Ef_params, Sol_params, calculate_coeffs_eigenfuncs, compute_normalisation_factors, determine_eigenfrequencies, dispersion_relation, test_bs_bc, time_integration_phi
+from beams_spec.beams_spec_core import f_function
+from beams_spec.beams_spec_visualisation import  simulate_beam, visual_check_f_functions, visually_check_initial_conditions, visually_inspect_efuncs
 
 #set parameters from the reference file
 

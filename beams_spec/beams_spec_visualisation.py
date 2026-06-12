@@ -4,9 +4,9 @@ import scipy as sp
 from time import sleep
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from .InitCondtions import *
-from .UtilityFunctions import *
-from .BeamProblem import TimoshenkoAdimParams
+from .beams_spec_init_conditions import *
+from .beams_spec_core import *
+from .beams_spec_structures import TimoshenkoAdimParams
 
 
 

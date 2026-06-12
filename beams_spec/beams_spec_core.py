@@ -8,8 +8,8 @@ from numpy.linalg import norm
 from numpy.lib.scimath import sqrt
 from scipy.optimize import fminbound
 from scipy.integrate import solve_ivp
-from .BeamProblem import TimoshenkoAdimParams
-from .InitCondtions import *
+from .beams_spec_structures import TimoshenkoAdimParams
+from .beams_spec_init_conditions import *
 
 def dispersion_relation(w, params:TimoshenkoAdimParams):
     """Returns a discretized version
