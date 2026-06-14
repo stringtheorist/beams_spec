@@ -7,10 +7,10 @@ from scipy.linalg import expm
 
 #This function returns complex values a-priori
 from numpy.lib.scimath import sqrt
-
 from scipy.integrate import solve_ivp
 from numpy.lib.scimath import sqrt
 from scipy.optimize import fminbound
+from scipy.interpolate import CubicSpline
 
 class NondimensionalBeamParameters:
     def __init__(self, L:float = 50.0, g:float = 2.5, phi1_00:float = 0.0,
@@ -362,7 +362,8 @@ def test_bs_bc(efparams:BasisParameters, norms_ef, tol):
 
 
 def v1(s, t, sparams:SolutionParameters):
-    """Solution for v1 in moving frame"""
+    """Solution for v1 in moving frame
+       Input: t = time, s = position, sparams = SolutionParameters Object"""
     w = sparams.basis_params.w
     efparams = sparams.basis_params
     norms_ef = sparams.norms_ef
@@ -378,7 +379,9 @@ def v1(s, t, sparams:SolutionParameters):
     return v1st
 
 def e1(s, t, sparams:SolutionParameters):
-    """Solution for v1 in moving frame"""
+    """Solution for e1 in moving frame
+        Input: t = time, s = position, sparams = SolutionParameters Object"""
+
     w = sparams.basis_params.w
     efparams = sparams.basis_params
     norms_ef = sparams.norms_ef
@@ -394,7 +397,9 @@ def e1(s, t, sparams:SolutionParameters):
     return e1st
 
 def o2(s, t, sparams:SolutionParameters):
-    """Solution for v1 in moving frame"""
+    """Solution for o2 in moving frame
+       Input: t = time, s = position, sparams = SolutionParameters Object"""
+
 
     w = sparams.basis_params.w
     efparams = sparams.basis_params
@@ -411,7 +416,9 @@ def o2(s, t, sparams:SolutionParameters):
     return o2st
 
 def k2(s, t, sparams:SolutionParameters):
-    """Solution for v1 in moving frame"""
+    """Solution for k2 in moving frame
+       Input: t = time, s = position, sparams = SolutionParameters Object"""
+
     w = sparams.basis_params.w
     efparams = sparams.basis_params
     norms_ef = sparams.norms_ef
@@ -427,7 +434,8 @@ def k2(s, t, sparams:SolutionParameters):
     return k2st
 
 def theta(s, t, sparams:SolutionParameters):
-    """Solution for v1 in moving frame"""
+    """Exact solution for theta
+       Input: t = time, s = position, sparams = SolutionParameters Object"""
 
     w = sparams.basis_params.w
     efparams = sparams.basis_params
@@ -455,6 +463,17 @@ def theta(s, t, sparams:SolutionParameters):
 # dydx(1) = e1-k2.*(x+y(2));
 # dydx(2) = k2.*y(1);
 
+def ode_phi_s2(s, phi, e1_s, k2_s):
+
+    e11 = e1_s(s)
+    k22 = k2_s(s)
+
+    phi_prime = np.zeros((2,), dtype=complex)
+    phi_prime[0] = e11 - (k22 * (s + phi[1]))
+    phi_prime[1] = k22*phi[1]
+
+    return phi_prime
+
 def ode_phi_s(s, phi, e1_numeric_s, k2_numeric_s, s_grid):
     e1 = np.interp(s, s_grid, e1_numeric_s)
     k2 = np.interp(s, s_grid, k2_numeric_s)
@@ -464,8 +483,37 @@ def ode_phi_s(s, phi, e1_numeric_s, k2_numeric_s, s_grid):
 
     return phi_prime
 
+def compute_phi_from_e1_k2(s_grid, t_grid,
+                           e1_numeric, k2_numeric,
+                           solution_parameters:SolutionParameters):
+    """Compute phi by integrating in space for each time step using
+    the equation in terms of k2 and e1"""
+    nt = np.size(t_grid)
+    ns = np.size(s_grid)
+    xspan = (s_grid[0], s_grid[-1])
+    tol = solution_parameters.tol
+    
+    phi1_numeric = np.zeros((ns, nt))
+    phi3_numeric = np.zeros((ns, nt))
+    for it in range(nt):
+        #cubic spline interpolated versions of e1 and k2
+        e1_s = CubicSpline(s_grid, e1_numeric[:, it])
+        k2_s = CubicSpline(s_grid, k2_numeric[:, it])
+        F = lambda s, phi: ode_phi_s2(s, phi, e1_s, k2_s)
+        phi_init_s = np.array([0.0, 0.0])
+        sol = solve_ivp(F, xspan, phi_init_s, t_eval=s_grid, atol=tol, rtol=tol, method='Radau')
+        phi_numeric = sol.y
+     
+        #print(f'Shape of y:{y.shape}')
 
-def time_integration_phi(s_grid, sparams:SolutionParameters):
+        phi1_numeric[:, it] = phi_numeric[0, :]
+        phi3_numeric[:, it] = s_grid + phi_numeric[1, :]
+
+
+    return (phi1_numeric, phi3_numeric)
+
+
+def time_integration_phi2(s_grid, sparams:SolutionParameters):
 
     w = sparams.basis_params.w
     L = sparams.basis_params.adim_params.L
@@ -493,11 +541,153 @@ def time_integration_phi(s_grid, sparams:SolutionParameters):
     #endfor
 
     #Time integration loop
+    #tol = 1.0e-5
+    for it in range(nt):
+        #cubic spline interpolated versions of e1 and k2
+        e1_s = CubicSpline(s_grid, e1_numeric[:, it])
+        k2_s = CubicSpline(s_grid, k2_numeric[:, it])
+        F = lambda s, phi: ode_phi_s2(s, phi, e1_s, k2_s)
+        phi_init_s = np.array([0.0, 0.0])
+        sol = solve_ivp(F, xspan, phi_init_s, t_eval=s_grid, atol=tol, rtol=tol, method='Radau')
+        phi_numeric = sol.y
+     
+        #print(f'Shape of y:{y.shape}')
+
+        phi1_numeric[:, it] = phi_numeric[0, :]
+        phi3_numeric[:, it] = s_grid + phi_numeric[1, :]
+
+
+    return (phi1_numeric, phi3_numeric, t)
+
+def compute_discrete_k2(s_grid, t_grid, sparams:SolutionParameters):
+
+    nt = np.size(t_grid)
+    ns = np.size(s_grid)
+
+    k2_numeric = np.zeros((ns, nt), dtype=complex)
+
+    for ii in range(ns):
+        for jj in range(ns):
+            k2_numeric[ii, jj] = k2(s_grid[ii], t_grid[jj], sparams)
+
+    return k2_numeric
+
+def compute_discrete_e1(s_grid, t_grid, sparams:SolutionParameters):
+
+    nt = np.size(t_grid)
+    ns = np.size(s_grid)
+
+    e1_numeric = np.zeros((ns, nt), dtype=complex)
+
+    for ii in range(ns):
+        for jj in range(ns):
+            e1_numeric[ii, jj] = e1(s_grid[ii], t_grid[jj], sparams)
+
+    return e1_numeric
+
+def compute_discrete_v1(s_grid, t_grid, sparams:SolutionParameters):
+
+    nt = np.size(t_grid)
+    ns = np.size(s_grid)
+
+    v1_numeric = np.zeros((ns, nt), dtype=complex)
+
+    for ii in range(ns):
+        for jj in range(ns):
+            v1_numeric[ii, jj] = v1(s_grid[ii], t_grid[jj], sparams)
+
+    return v1_numeric
+
+def compute_discrete_o2(s_grid, t_grid, sparams:SolutionParameters):
+
+    nt = np.size(t_grid)
+    ns = np.size(s_grid)
+
+    o2_numeric = np.zeros((ns, nt), dtype=complex)
+
+    for ii in range(ns):
+        for jj in range(ns):
+            o2_numeric[ii, jj] = o2(s_grid[ii], t_grid[jj], sparams)
+
+    return o2_numeric
+
+
+# def compute_phi_via_bcs(s_grid, t_grid, e1_numeric, k2_numeric, sparams:SolutionParameters):
+#     """Computes phi via integration in space using boundary conditions.
+#        Inputs: s_grid, t_grid: time and space grids
+#                e1_numeric, k2_numeric: numerical versions of e1 and k2
+#                sparams: SolutionParameters object"""
+
+#     L = sparams.basis_params.adim_params.L
+#     tol = sparams.tol
+
+#     nt = np.size(t_grid)
+#     ns = np.size(s_grid)
+
+#     xspan = [0.0, L]
+
+#     phi1_numeric = np.zeros((ns, nt))
+#     phi3_numeric = np.zeros((ns, nt))
+
+#     for it in range(nt):
+#         #cubic spline interpolated versions of e1 and k2
+#         e1_s = CubicSpline(s_grid, e1_numeric[:, it])
+#         k2_s = CubicSpline(s_grid, k2_numeric[:, it])
+#         F = lambda s, phi: ode_phi_s2(s, phi, e1_s, k2_s)
+#         phi_init_s = np.array([0.0, 0.0])
+#         sol = solve_ivp(F, xspan, phi_init_s, t_eval=s_grid, atol=tol, rtol=tol, method='Radau')
+#         phi_numeric = sol.y
+     
+#         #print(f'Shape of y:{y.shape}')
+
+#         phi1_numeric[:, it] = phi_numeric[0, :]
+#         phi3_numeric[:, it] = s_grid + phi_numeric[1, :]
+
+
+#     return (phi1_numeric, phi3_numeric)
+
+        
+        
+    
+
+
+            
+            
+
+def time_integration_phi(s_grid, sparams:SolutionParameters):
+
+    w = sparams.basis_params.w
+    L = sparams.basis_params.adim_params.L
+    tmax = (2.0*np.pi)/np.min(w)
+    dt = 2.0*np.pi/w[9, 0]
+    t = np.r_[0.0 : tmax : dt]
+    nt = np.size(t)
+    ns = np.size(s_grid)
+    xspan = (0, L)
+    e1_numeric = np.zeros((ns, nt), dtype=complex)
+    k2_numeric = np.zeros((ns, nt), dtype=complex)
+    s_grid = s_grid.reshape((ns,))
+    tol = sparams.tol
+    phi1_numeric = np.zeros((ns, nt), dtype=complex)
+    phi3_numeric = np.zeros((ns, nt), dtype=complex)
+
+    #print(f'Value of nt:{nt}')
+    #print(f'Value of ns:{ns}')
+    #Discretized values of k2 and e1 on s-t grid
+    for ii in range(ns):
+        for jj in range(nt):
+            e1_numeric[ii, jj] = e1(s_grid[ii], t[jj], sparams)
+            k2_numeric[ii, jj] = k2(s_grid[ii], t[jj], sparams)
+        #endfor
+    #endfor
+
+    #Time integration loop
+    #tol = 1.0e-5
     for it in range(nt):
         F = lambda s, phi, it=it: ode_phi_s(s, phi, e1_numeric[:, it].reshape((ns,)),
                                              k2_numeric[:, it].reshape((ns,)), s_grid)
         phi_init_s = np.array([0.0, 0.0])
-        sol = solve_ivp(F, xspan, phi_init_s, t_eval=s_grid, atol=tol, rtol=tol)
+        sol = solve_ivp(F, xspan, phi_init_s, t_eval=s_grid, atol=tol, rtol=tol, method='DOP853')
         phi_numeric = sol.y
      
         #print(f'Shape of y:{y.shape}')
@@ -532,6 +722,35 @@ def compute_theta_via_k(s_grid, t_grid, k2_numeric, R_init_numeric):
             R_old = R_new
 
     return R_out
+
+def compute_theta_from_k(s_grid, t_grid, k2_numeric):
+    """NOTE: For cantilever beams theta(0, t) = 0"""
+    K = np.zeros((2,2))
+
+    ns = np.size(s_grid)
+    nt = np.size(t_grid)
+    delta_s = s_grid[1] - s_grid[0]
+
+    cos_theta = np.zeros((ns, nt))
+    sin_theta = np.zeros((ns, nt))
+    
+    R_old = np.zeros((2,2))
+    for i_t in range(nt):
+        theta_t = 0.0
+        R_old[0, 0] = np.cos(theta_t)
+        R_old[0, 1] = -np.sin(theta_t)
+        R_old[1, 0] = np.sin(theta_t)
+        R_old[1, 1] = np.cos(theta_t)
+        for i_s in range(ns):
+            k2_ij = k2_numeric[i_s, i_t]
+            K[0, 1] = -k2_ij
+            K[1, 0] = k2_ij
+            R_new = so2_time_step(K, R_old, delta_s)
+            cos_theta[i_s, i_t] = R_new[0, 0]
+            sin_theta[i_s, i_t] = R_new[1, 0]
+            R_old = R_new
+
+    return (cos_theta, sin_theta)
 
 
 

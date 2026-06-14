@@ -128,13 +128,13 @@ sparams = SolutionParameters(efparams, norms_ef, tolerance_efunc)
 
 #visually_inspect_efuncs(efparams, norms_ef, s, w_cutoff)
 
-test_bs_bc(efparams, norms_ef, tolerance_efunc)
+#test_bs_bc(efparams, norms_ef, tolerance_efunc)
 
-#visually_check_initial_conditions(s, sparams)
+visually_check_initial_conditions(s, sparams)
 
-phi1, phi3, t = time_integration_phi(s, sparams)
+#phi1, phi3, t = time_integration_phi(s, sparams)
 
-simulate_beam(phi1, phi3, s, t, sparams)
+#simulate_beam(phi1, phi3, s, t, sparams)
 
 
 

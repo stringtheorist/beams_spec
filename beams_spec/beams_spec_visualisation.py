@@ -4,7 +4,6 @@ import scipy as sp
 from time import sleep
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from .beams_spec_init_conditions import *
 from .beams_spec_core import *
 
 
@@ -107,7 +106,7 @@ def simulate_beam(phi1, phi3, s, t, sparams:SolutionParameters):
     def update(it):
 
         ax.clear()
-        ax.set(xlim=[0.0, 60.0], ylim=[-80.0, +80.0])
+       
         for i in range(ns):
             phx_s[i] = -phi1[i, it]*sines[i, it] + phi3[i, it]*cosines[i, it]
             phy_s[i] = +phi1[i, it]*cosines[i, it] + phi3[i, it]*sines[i, it]
@@ -116,6 +115,8 @@ def simulate_beam(phi1, phi3, s, t, sparams:SolutionParameters):
 
         q1 = ax.quiver(phx_s, phy_s, -sines[:, it], cosines[:, it])
         q2 = ax.quiver(phx_s, phy_s, sines[:, it], -cosines[:, it])
+        ax.set(xlim=[0.0, 60.0], ylim=[-50.0, +50.0])
+        ax.set_aspect('equal', adjustable='box')
         
         sleep(0.1)
         fig.canvas.draw()
@@ -125,7 +126,40 @@ def simulate_beam(phi1, phi3, s, t, sparams:SolutionParameters):
     plt.show()
     
         
-    
+def simulate_beam_approx_theta(phi1, phi3, cos_theta, sin_theta, s_grid, t_grid):
+    """Uses externally computed theta"""
+    ns = np.shape(phi1)[0]
+    nt = np.shape(phi1)[1]
+    s_grid = s_grid.reshape((ns,))
+
+    fig, ax = plt.subplots()
+
+    phx_s = np.zeros((ns,))
+    phy_s = np.zeros((ns,))
+
+   
+    def update(it):
+
+        ax.clear()
+       
+        for i in range(ns):
+            phx_s[i] = -phi1[i, it]*sin_theta[i, it] + phi3[i, it]*cos_theta[i, it]
+            phy_s[i] = +phi1[i, it]*cos_theta[i, it] + phi3[i, it]*sin_theta[i, it]
+
+        medial = ax.plot(phx_s, phy_s)
+
+        q1 = ax.quiver(phx_s, phy_s, -sin_theta[:, it], cos_theta[:, it])
+        q2 = ax.quiver(phx_s, phy_s, sin_theta[:, it], -cos_theta[:, it])
+        ax.set(xlim=[0.0, 60.0], ylim=[-60.0, +60.0])
+        ax.set_aspect('equal', adjustable='box')
+        
+        sleep(0.1)
+        fig.canvas.draw()
+        return medial
+
+    anim = FuncAnimation(fig=fig, func=update, frames=nt)
+    plt.show()
+
     
 
     
