@@ -567,7 +567,7 @@ def compute_discrete_k2(s_grid, t_grid, sparams:SolutionParameters):
     k2_numeric = np.zeros((ns, nt), dtype=complex)
 
     for ii in range(ns):
-        for jj in range(ns):
+        for jj in range(nt):
             k2_numeric[ii, jj] = k2(s_grid[ii], t_grid[jj], sparams)
 
     return k2_numeric
@@ -580,7 +580,7 @@ def compute_discrete_e1(s_grid, t_grid, sparams:SolutionParameters):
     e1_numeric = np.zeros((ns, nt), dtype=complex)
 
     for ii in range(ns):
-        for jj in range(ns):
+        for jj in range(nt):
             e1_numeric[ii, jj] = e1(s_grid[ii], t_grid[jj], sparams)
 
     return e1_numeric
@@ -593,7 +593,7 @@ def compute_discrete_v1(s_grid, t_grid, sparams:SolutionParameters):
     v1_numeric = np.zeros((ns, nt), dtype=complex)
 
     for ii in range(ns):
-        for jj in range(ns):
+        for jj in range(nt):
             v1_numeric[ii, jj] = v1(s_grid[ii], t_grid[jj], sparams)
 
     return v1_numeric
@@ -606,10 +606,25 @@ def compute_discrete_o2(s_grid, t_grid, sparams:SolutionParameters):
     o2_numeric = np.zeros((ns, nt), dtype=complex)
 
     for ii in range(ns):
-        for jj in range(ns):
+        for jj in range(nt):
             o2_numeric[ii, jj] = o2(s_grid[ii], t_grid[jj], sparams)
 
     return o2_numeric
+
+def compute_discrete_theta(s_grid, t_grid, sparams:SolutionParameters):
+
+    nt = np.size(t_grid)
+    ns = np.size(s_grid)
+
+    theta_numeric = np.zeros((ns, nt), dtype=complex)
+
+    for ii in range(ns):
+        for jj in range(nt):
+            theta_numeric[ii, jj] = theta(s_grid[ii], t_grid[jj], sparams)
+
+    return theta_numeric
+
+
 
 
 # def compute_phi_via_bcs(s_grid, t_grid, e1_numeric, k2_numeric, sparams:SolutionParameters):

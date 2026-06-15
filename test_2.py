@@ -56,5 +56,5 @@ print(f'Finished basis setup.')
 phi1, phi3, t = time_integration_phi2(s, solution_params)
 print(f'Finished time integration.')
 
-simulate_beam(phi1, phi3, s, t, solution_params)
+simulate_beam_exact_theta(phi1, phi3, s, t, solution_params)
 print(f'The end.')

@@ -84,12 +84,12 @@ def visually_inspect_efuncs(efparams:BasisParameters, norms_ef, s, wc):
     plt.show()
 
 
-def simulate_beam(phi1, phi3, s, t, sparams:SolutionParameters):
+def simulate_beam_exact_theta(phi1, phi3, s_grid, t_grid, sparams:SolutionParameters, save=False):
     """animate the beam motion"""
     
     ns = np.shape(phi1)[0]
     nt = np.shape(phi1)[1]
-    s = s.reshape((ns,))
+    s_grid = s_grid.reshape((ns,))
 
     fig, ax = plt.subplots()
 
@@ -100,12 +100,16 @@ def simulate_beam(phi1, phi3, s, t, sparams:SolutionParameters):
 
     for ii in range(ns):
         for jj in range(nt):
-            sines[ii, jj] = np.sin(theta(s[ii], t[jj], sparams))
-            cosines[ii, jj] = np.cos(theta(s[ii], t[jj], sparams))
+            sines[ii, jj] = np.sin(theta(s_grid[ii], t_grid[jj], sparams))
+            cosines[ii, jj] = np.cos(theta(s_grid[ii], t_grid[jj], sparams))
 
     def update(it):
 
         ax.clear()
+        text_box_props = dict(boxstyle='round', alpha=0.5)
+        textstr = f"t = {t_grid[it]:0.2f}" 
+        ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14,
+                verticalalignment='top', bbox=text_box_props)
        
         for i in range(ns):
             phx_s[i] = -phi1[i, it]*sines[i, it] + phi3[i, it]*cosines[i, it]
@@ -113,9 +117,9 @@ def simulate_beam(phi1, phi3, s, t, sparams:SolutionParameters):
 
         medial = ax.plot(phx_s, phy_s)
 
-        q1 = ax.quiver(phx_s, phy_s, -sines[:, it], cosines[:, it])
-        q2 = ax.quiver(phx_s, phy_s, sines[:, it], -cosines[:, it])
-        ax.set(xlim=[0.0, 60.0], ylim=[-50.0, +50.0])
+        q1 = ax.quiver(phx_s, phy_s, -sines[:, it], cosines[:, it], headaxislength=0, headlength=0)
+        q2 = ax.quiver(phx_s, phy_s, sines[:, it], -cosines[:, it], headaxislength=0, headlength=0)
+        ax.set(xlim=[0.0, 60.0], ylim=[-60.0, +60.0])
         ax.set_aspect('equal', adjustable='box')
         
         sleep(0.1)
@@ -123,10 +127,13 @@ def simulate_beam(phi1, phi3, s, t, sparams:SolutionParameters):
         return medial
 
     anim = FuncAnimation(fig=fig, func=update, frames=nt)
-    plt.show()
+    if save==True:
+        anim.save(filename="beam_sim_exact_theta.mp4", writer="ffmpeg")
+    else:
+        plt.show()
     
-        
-def simulate_beam_approx_theta(phi1, phi3, cos_theta, sin_theta, s_grid, t_grid):
+      
+def simulate_beam_approx_theta(phi1, phi3, cos_theta, sin_theta, s_grid, t_grid, save=False):
     """Uses externally computed theta"""
     ns = np.shape(phi1)[0]
     nt = np.shape(phi1)[1]
@@ -141,6 +148,11 @@ def simulate_beam_approx_theta(phi1, phi3, cos_theta, sin_theta, s_grid, t_grid)
     def update(it):
 
         ax.clear()
+        text_box_props = dict(boxstyle='round', alpha=0.5)
+        textstr = f"t = {t_grid[it]:0.2f}" 
+        ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14,
+                verticalalignment='top', bbox=text_box_props)
+
        
         for i in range(ns):
             phx_s[i] = -phi1[i, it]*sin_theta[i, it] + phi3[i, it]*cos_theta[i, it]
@@ -148,21 +160,24 @@ def simulate_beam_approx_theta(phi1, phi3, cos_theta, sin_theta, s_grid, t_grid)
 
         medial = ax.plot(phx_s, phy_s)
 
-        q1 = ax.quiver(phx_s, phy_s, -sin_theta[:, it], cos_theta[:, it])
-        q2 = ax.quiver(phx_s, phy_s, sin_theta[:, it], -cos_theta[:, it])
+        q1 = ax.quiver(phx_s, phy_s, -sin_theta[:, it], cos_theta[:, it], headaxislength=0, headlength=0)
+        q2 = ax.quiver(phx_s, phy_s, sin_theta[:, it], -cos_theta[:, it], headaxislength=0, headlength=0)
         ax.set(xlim=[0.0, 60.0], ylim=[-60.0, +60.0])
         ax.set_aspect('equal', adjustable='box')
         
         sleep(0.1)
         fig.canvas.draw()
         return medial
-
+    
     anim = FuncAnimation(fig=fig, func=update, frames=nt)
-    plt.show()
+    if save == True: 
+        anim.save(filename="beam_sim_approx_theta.mp4", writer="ffmpeg")
+    else:
+        plt.show()
 
-    
 
-    
+
+  
     
     
     
