@@ -45,7 +45,7 @@ tolerance_func = 1.0e-3
 
 adim_phys_params = NondimensionalBeamParameters(L=L, g=g)
 
-basis_params = BasisParameters(w_max, w_cutoff, delta_w, tolerance_freq, adim_phys_params)
+basis_params = BasisParameters(w_max, w_cutoff, delta_w, tolerance_freq, 3000, adim_phys_params)
 
 norms_modal = compute_normalisation_factors(basis_params, tolerance_func)
 

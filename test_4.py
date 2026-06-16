@@ -23,8 +23,23 @@ from beams_spec.beams_spec_visualisation import *
 # TODO: investigation of instabilities - integrals.
 # TODO: 
 #Nondimensional phyisical parameters
-L = 50.0
+
+R = 5.0*(10.0**(-2))
+R_c = R/sqrt(2)
+rho = 4000.0
+E = 200.0 * (10.0**9)
+
+T_c = R_c * sqrt(rho/E)
+
+L_p = 15 #meters
+
+L = L_p/R_c
+
+print(f'nondimensional length = {L:1.5e}')
+
 g = 2.5
+# L = 50.0
+# g = 2.5
 
 adim_params = NondimensionalBeamParameters(L=L, g=g)
 
@@ -34,9 +49,12 @@ s_grid = np.r_[0.0 : L + delta_s : delta_s]
 
 w_cutoff = sqrt(g) #cutoff frequency
 w_max = 2.0*sqrt(2)*w_cutoff
-delta_w = ((np.pi/L)**2)/100.0
+#delta_w = ((np.pi/L)**2)/100.0
+delta_w = ((np.pi/50.0)**2)/100.0
 w = np.r_[0.0 : w_max : delta_w]
 nw = np.size(w)
+
+n_modes = 20
 
 w = w.reshape((nw,1))
 
@@ -49,7 +67,7 @@ tolerance_func = 1.0e-3
 #define structures and compute modal wavenumbers
 adim_params = NondimensionalBeamParameters(L=L, g=g)
 
-basis_params = BasisParameters(w_max, w_cutoff, delta_w, tolerance_freq, 3000, adim_params)
+basis_params = BasisParameters(w_max, w_cutoff, delta_w, tolerance_freq, n_modes, adim_params)
 
 modal_norms = compute_normalisation_factors(basis_params, tolerance_func)
 
@@ -85,8 +103,8 @@ print(f'Relative error cos(theta) between exact and approx = {e_cos:1.5e}')
 print(f'Relative error sin(theta) between exact and approx = {e_sin:1.5e}')
 
 #Visualise the solution
-simulate_beam_exact_theta(phi1_numeric, phi3_numeric, s_grid, t_grid, solution_params, save=True)
-simulate_beam_approx_theta(phi1_numeric, phi3_numeric, cos_theta, sin_theta, s_grid, t_grid, save=True)
+# simulate_beam_exact_theta(phi1_numeric, phi3_numeric, s_grid, t_grid, solution_params, save=True)
+simulate_beam_approx_theta(phi1_numeric, phi3_numeric, cos_theta, sin_theta, s_grid, t_grid, save=True, filename='test.mp4')
 
 # e1 et k2 au cours du temps. a un point pres de 3*L/4
 

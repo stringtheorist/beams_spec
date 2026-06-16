@@ -23,16 +23,27 @@ class NondimensionalBeamParameters:
 
 
 class BasisParameters:
-    def __init__(self, w_max, w_cutoff, delta_w, tol_frequency, adim_params:NondimensionalBeamParameters):
+    def __init__(self, w_max, w_cutoff, delta_w, tol_frequency, n_modes, adim_params:NondimensionalBeamParameters):
         self.adim_params = adim_params
 
+        self.n_modes = n_modes
         #determine high and low frequency domains
         w_lf, w_hf = low_and_high_frequency_domains(w_max, w_cutoff, delta_w)
         wn_lf, kpn_lf, kmn_lf = compute_frequencies_wavenumbers(w_lf, tol_frequency, self.adim_params)
         wn_hf, kpn_hf, kmn_hf = compute_frequencies_wavenumbers(w_hf, tol_frequency, self.adim_params)
-        self.w = np.block([[wn_lf], [wn_hf]])
-        self.kp = np.block([[kpn_lf], [kpn_hf]])
-        self.km = np.block([[kmn_lf], [kmn_hf]])
+        w = np.block([[wn_lf], [wn_hf]])
+        kp = np.block([[kpn_lf], [kpn_hf]])
+        km = np.block([[kmn_lf], [kmn_hf]])
+
+        if n_modes > np.size(w):
+            self.w = w
+            self.kp = kp
+            self.km = km
+        else:
+            self.w = w[0:n_modes, 0].reshape((n_modes, 1))
+            self.kp = kp[0:n_modes, 0].reshape((n_modes, 1))
+            self.km = km[0:n_modes, 0].reshape((n_modes, 1))
+            
         self.apc, self.aps, self.amc, self.ams = compute_modal_amplitutes(self.w, self.kp, self.km, self.adim_params)
 
 class SolutionParameters:
@@ -136,6 +147,9 @@ def compute_frequencies_wavenumbers(w, tolerance:float, params:NondimensionalBea
         x1 = np.max([np.min(w), w_n[idx_n, 0] - (2.0 * delta_w)])
         x2 = np.min([w_n[idx_n, 0] + (2.0 * delta_w), np.max(w)])
 
+        #print(f'This is x1:{x1}')
+        #print(f'This is x2:{x2}')
+
         f_opt_func = lambda w : f_abs(w) / f_abs(w_n[idx_n])
 
         x, f_val, ierr, num_eval = fminbound(f_opt_func, x1, x2, xtol=tolerance, full_output=True)
@@ -143,7 +157,10 @@ def compute_frequencies_wavenumbers(w, tolerance:float, params:NondimensionalBea
         #print(f'Debug: This is x:{x}')
 
         if ierr == 0:
-            w_n_refined[idx_w] = x[0]
+            if isinstance(x, np.ndarray):
+                w_n_refined[idx_w] = x[0]
+            else:
+                w_n_refined[idx_w] = x
             idx_w = idx_w + 1
 
     #Now eliminate extraneous values in w_n_refined

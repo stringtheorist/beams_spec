@@ -84,7 +84,10 @@ def visually_inspect_efuncs(efparams:BasisParameters, norms_ef, s, wc):
     plt.show()
 
 
-def simulate_beam_exact_theta(phi1, phi3, s_grid, t_grid, sparams:SolutionParameters, save=False):
+def simulate_beam_exact_theta(phi1, phi3,
+                              s_grid, t_grid,
+                              sparams:SolutionParameters,
+                              save=False, filename='beam_sim_exact_theta.mp4'):
     """animate the beam motion"""
     
     ns = np.shape(phi1)[0]
@@ -97,6 +100,8 @@ def simulate_beam_exact_theta(phi1, phi3, s_grid, t_grid, sparams:SolutionParame
     cosines = np.zeros((ns, nt))
     phx_s = np.zeros((ns,))
     phy_s = np.zeros((ns,))
+    x_lim_fig = s_grid[-1] + 10.0
+    y_lim_fig = s_grid[-1] + 10.0
 
     for ii in range(ns):
         for jj in range(nt):
@@ -119,7 +124,7 @@ def simulate_beam_exact_theta(phi1, phi3, s_grid, t_grid, sparams:SolutionParame
 
         q1 = ax.quiver(phx_s, phy_s, -sines[:, it], cosines[:, it], headaxislength=0, headlength=0)
         q2 = ax.quiver(phx_s, phy_s, sines[:, it], -cosines[:, it], headaxislength=0, headlength=0)
-        ax.set(xlim=[0.0, 60.0], ylim=[-60.0, +60.0])
+        ax.set(xlim=[0.0, x_lim_fig], ylim=[-y_lim_fig, +y_lim_fig])
         ax.set_aspect('equal', adjustable='box')
         
         sleep(0.1)
@@ -128,12 +133,15 @@ def simulate_beam_exact_theta(phi1, phi3, s_grid, t_grid, sparams:SolutionParame
 
     anim = FuncAnimation(fig=fig, func=update, frames=nt)
     if save==True:
-        anim.save(filename="beam_sim_exact_theta.mp4", writer="ffmpeg")
+        anim.save(filename=filename, writer="ffmpeg")
     else:
         plt.show()
     
       
-def simulate_beam_approx_theta(phi1, phi3, cos_theta, sin_theta, s_grid, t_grid, save=False):
+def simulate_beam_approx_theta(phi1, phi3,
+                               cos_theta, sin_theta,
+                               s_grid, t_grid,
+                               save=False, filename='beam_sim_approx_theta.mp4'):
     """Uses externally computed theta"""
     ns = np.shape(phi1)[0]
     nt = np.shape(phi1)[1]
@@ -143,6 +151,8 @@ def simulate_beam_approx_theta(phi1, phi3, cos_theta, sin_theta, s_grid, t_grid,
 
     phx_s = np.zeros((ns,))
     phy_s = np.zeros((ns,))
+    x_lim_fig = s_grid[-1] + 10.0
+    y_lim_fig = s_grid[-1] + 10.0
 
    
     def update(it):
@@ -162,7 +172,7 @@ def simulate_beam_approx_theta(phi1, phi3, cos_theta, sin_theta, s_grid, t_grid,
 
         q1 = ax.quiver(phx_s, phy_s, -sin_theta[:, it], cos_theta[:, it], headaxislength=0, headlength=0)
         q2 = ax.quiver(phx_s, phy_s, sin_theta[:, it], -cos_theta[:, it], headaxislength=0, headlength=0)
-        ax.set(xlim=[0.0, 60.0], ylim=[-60.0, +60.0])
+        ax.set(xlim=[0.0, x_lim_fig], ylim=[-y_lim_fig, +y_lim_fig])
         ax.set_aspect('equal', adjustable='box')
         
         sleep(0.1)
@@ -171,7 +181,7 @@ def simulate_beam_approx_theta(phi1, phi3, cos_theta, sin_theta, s_grid, t_grid,
     
     anim = FuncAnimation(fig=fig, func=update, frames=nt)
     if save == True: 
-        anim.save(filename="beam_sim_approx_theta.mp4", writer="ffmpeg")
+        anim.save(filename=filename, writer="ffmpeg")
     else:
         plt.show()
 
